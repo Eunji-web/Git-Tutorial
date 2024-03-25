@@ -1,0 +1,208 @@
+import java.sql.*;
+import java.io.*;
+import java.util.InputMismatchException;
+import java.util.Scanner;
+
+
+public class MySQLJDBC {
+    static Connection conn = null;
+    static Statement stmt = null;
+    static ResultSet rs = null;
+    public static void main(String[] args) throws Exception {
+
+        try{
+            Class.forName("com.mysql.jdbc.Driver");
+
+            System.out.println("Connecting to database...");
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/moviedb1?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC", "root", "qkrdmswl601^^");
+
+            search_program sp = new search_program();
+            sp.run();
+
+            stmt.close();
+            conn.close();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+}
+
+
+class Movie_info extends MySQLJDBC {
+    String id;
+    String title;
+    String company;
+    String releasedate;
+    String country;
+    int totalscreen;
+    double profit;
+    int totalnum;
+    String grade;
+    Scanner scanner = new Scanner(System.in);
+
+
+    void movie_data() throws Exception {
+
+        try {
+            System.out.println("데이터를 삽입하는 중...");
+            String line = null;
+            String[] tokens;
+            String movieFile = "movie_data.txt";
+            FileReader file = new FileReader(movieFile);
+            BufferedReader buffer = new BufferedReader(file);
+            line = buffer.readLine();
+            stmt = conn.createStatement();
+            while((line = buffer.readLine())!=null) {
+                tokens = line.split("\\|");
+                id = tokens[1];
+                title = tokens[2];
+                company = tokens[3];
+                releasedate = tokens[4];
+                country = tokens[5];
+                totalscreen = Integer.parseInt(tokens[6]);
+                profit = Double.parseDouble(tokens[7]);
+                totalnum = Integer.parseInt(tokens[8]);
+                grade = tokens[9];
+                String insertString = "insert into movie values ("+"'"+id+"'"+",'"+title+"','"
+                        +company+"','"+releasedate+"','"+country+"',"+totalscreen+","
+                        +profit+","+totalnum+",'"+grade+"')";
+                stmt.executeUpdate(insertString);
+            }
+            System.out.println("데이터 삽입이 완료되었습니다.");
+
+        }catch(SQLException e) {
+        }
+    }
+
+    void title_search() throws Exception {
+        try {
+            int number=0;
+
+            System.out.print("찾고 싶은 영화의 제목을 입력하세요.>>");
+            String title = scanner.nextLine();
+
+            stmt = conn.createStatement();
+            rs = stmt.executeQuery("SELECT * FROM movie where title like '%"+title+"%'");
+
+            while(rs.next()) {
+                System.out.println(rs.getString(1)+"|"+rs.getString(2)+"|"
+                        +rs.getString(3)+"|"+rs.getString(4)+"|"+rs.getString(5)
+                        +"|"+rs.getInt("totalscreen")+"|"+rs.getDouble("profit")+"|"+rs.getInt("totalnum")
+                        +"|"+rs.getString("grade"));
+                number++;
+            }
+
+            System.out.println("영화 제목에 '"+title+"'이/가 들어간 영화가 "+number+"개 검색되었습니다.");
+
+        }catch(SQLException e) {
+            System.out.println(title+ "이(가) 들어간 제목의 영화를 찾을 수 없습니다.");
+        }
+
+    }
+
+    void audience_search() throws Exception {
+        try {
+            int number=0;
+            System.out.print("찾고 싶은 영화의 관객 수를 입력하세요.>>");
+            int totalnum = scanner.nextInt();
+            scanner.nextLine();
+            stmt = conn.createStatement();
+            rs = stmt.executeQuery("SELECT * FROM movie where totalnum>="+totalnum);
+            while(rs.next()) {
+                System.out.println(rs.getString(1)+"|"+rs.getString(2)+"|"
+                        +rs.getString(3)+"|"+rs.getString(4)+"|"+rs.getString(5)
+                        +"|"+rs.getInt("totalscreen")+"|"+rs.getDouble("profit")+"|"+rs.getInt("totalnum")
+                        +"|"+rs.getString("grade"));
+                number++;
+            }
+
+            System.out.println("관객 수가 "+totalnum+" 명이 이상인 영화가 "+number+" 개 검색되었습니다.");
+
+        }catch(SQLException e) {
+            System.out.println(totalnum+"명 이상의 영화를 찾을 수 없습니다.");
+        }
+    }
+
+    void release_search(String day1, String day2) throws Exception{
+        try{
+            int number=0;
+            stmt = conn.createStatement();
+            rs = stmt.executeQuery("SELECT * FROM movie where releasedate between '"+day1+"' and '"+day2+"'");
+            while(rs.next()) {
+                System.out.println(rs.getString(1)+"|"+rs.getString(2)+"|"
+                        +rs.getString(3)+"|"+rs.getString(4)+"|"+rs.getString(5)
+                        +"|"+rs.getInt("totalscreen")+"|"+rs.getDouble("profit")+"|"+rs.getInt("totalnum")
+                        +"|"+rs.getString("grade"));
+                number++;
+            }
+            System.out.println(day1+" ~ "+day2+"사이에 개봉한 영화가" +number+" 개 검색되었습니다.");
+        }catch(SQLException e) {
+            System.out.println(day1+" ~ "+day2+" 사이에 개봉한 영화를 찾을 수 없습니다.");
+        }
+    }
+}
+
+class search_program extends Movie_info{
+    Scanner scanner = new Scanner(System.in);
+    void run() throws Exception {
+
+        System.out.println(" 영화 검색 프로그램을 시작합니다! ");
+
+        int choice=0;
+        try {
+            do {
+                System.out.println("===========================================");
+                System.out.println("(0) 종료");
+                System.out.println("(1) 릴레이션 생성 및 데이터 삽입");
+                System.out.println("(2) 제목을 이용한 검색");
+                System.out.println("(3) 관객수를 이용한 검색");
+                System.out.println("(4) 개봉일을 이용한 검색");
+                System.out.println("===========================================");
+                System.out.print("원하는 번호를 입력해주세요>>");
+                choice = scanner.nextInt();
+                scanner.nextLine();
+                switch(choice) {
+                    case 0 :
+                        System.out.println("===========================================");
+                        System.out.println("영화 검색 프로그램을 종료합니다.");
+                        System.out.println("===========================================");
+                        break;
+                    case 1 :
+                        stmt=conn.createStatement();
+                        stmt.executeUpdate("create table movie (\r\n" + "    id           char(3), \r\n"
+                                + "    title        varchar (100), \r\n" + "    company      varchar (50),\r\n"
+                                + "    releasedate  date,\r\n" + "    country      varchar (100),  \r\n"
+                                + "    totalscreen  int,\r\n" + "    profit       numeric (15,2),\r\n"
+                                + "    totalnum     int,\r\n" + "    grade        varchar (50),\r\n"
+                                + "    primary key (id));");
+                        movie_data();
+                        break;
+                    case 2 :
+                        title_search();
+                        break;
+                    case 3 :
+                        audience_search();
+                        break;
+                    case 4 :
+                        System.out.print("기간의 시작 날짜를 입력하세요. (ex) 2011-01-01) >> ");
+                        String day1= scanner.next();
+                        scanner.nextLine();
+                        System.out.print("기간의 종료 날짜를 입력하세요. (ex) 2013-03-02) >> ");
+                        String day2= scanner.next();
+                        scanner.nextLine();
+
+                        release_search(day1,day2);
+                        break;
+
+                    default : System.out.println("잘못 입력하셨습니다.");
+                        break;
+                }
+            }while(choice!=0);
+        }catch(InputMismatchException e) {
+            System.out.println("");
+        }
+    }
+}
